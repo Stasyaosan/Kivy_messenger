@@ -5,7 +5,7 @@ from kivy.uix.label import Label
 
 
 class LoginScreen(Screen):
-    def validateuser(self):
+    def validate_user(self):
         username = self.ids.usernameinput.text
         password = self.ids.passwordinput.text
 
