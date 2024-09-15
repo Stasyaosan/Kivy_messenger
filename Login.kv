@@ -1,0 +1,30 @@
+<LoginScreen>:
+    GridLayout:
+        cols: 1
+        padding: 10
+        spacing: 10
+        Label:
+            text: "Login"
+            font_size: 32
+        TextInput:
+            id: username_input
+            hint_text: "Username"
+            multiline: False
+        TextInput:
+            id: password_input
+            hint_text: "Password"
+            password: True
+            multiline: False
+        Button:
+            text: "Login"
+            on_press: root.validate_user()
+
+<HomeScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: "Welcome!"
+            font_size: 32
+        Button:
+            text: "Log out"
+            on_press: app.root.current = 'login'
