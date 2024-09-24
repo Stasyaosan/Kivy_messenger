@@ -4,7 +4,7 @@ import json
 
 
 class Api:
-    def init(self, token):
+    def __init__(self, token):
         self.token = token
 
     def request_post(self, method, params=None):
@@ -18,16 +18,14 @@ class Api:
 
 
 class Auth:
-    def init(self, login, password):
+    def __init__(self, login, password):
         self.login = login
         self.password = password
 
     def get_token(self):
-        url = f'{config.URL}auth/'
-        token = requests.post(url, data={'login': self.login, 'password': self.password})
-        return json.loads(token.text)
-
-
-token = Auth('qwe@qwe.ru', 'qwe@qwe.ru').get_token()
-api = Api(token['token'])
-print(api.request_post('get_chats', {'id_user': 13}))
+        try:
+            url = f'{config.URL}auth'
+            token = requests.post(url, data={'login': self.login, 'password': self.password})
+            return json.loads(token.text)
+        except:
+            return 'Error'

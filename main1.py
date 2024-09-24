@@ -8,9 +8,6 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.popup import Popup
 from api import Auth, Api
 from db import Connect
-from kivy.core.window import Window
-
-Window.clearcolor = (0.1, 0.3, 0.5, 1)
 
 session = None
 
@@ -23,24 +20,27 @@ class LoginScreen(Screen):
         auth = Auth(username, password)
         token = auth.get_token()
         session = token['token']
+        print(token['token'])
         if token['token'] == 'Error' or token['token'] == '':
             self.show_invalid_login_popup()
         else:
-            # реализовать валидацию токена
             db = Connect('users.db')
             db.add_token(token['token'])
-            api = Api(session)
-            # try:
-            id_user = api.request_post('get_id_user', {'token': token['token']})
-            id_user = id_user['id_user']
 
-            chat_list = api.request_post('get_chats', {'token': token['token'], 'id_user': id_user})
-            chat_screen = self.manager.get_screen('chats')
-            chat_screen.set_chat_list(chat_list)
-            self.manager.current = "chats"
-            # except Exception as e:
-            #     print(f"Ошибка при получении чатов: {e}")
-            #     self.show_invalid_login_popup()
+            api = Api(session)
+            try:
+                id_user = api.request_post('get_id_user', {'token': token['token']})
+                id_user = id_user['id_user']
+                chat_list = api.request_post('get_chats', {'token': token['token'], 'id_user': id_user})
+
+                chat_screen = self.manager.get_screen('chats')
+                chat_screen.set_chat_list(chat_list)
+
+                self.manager.current = "chats"
+
+            except Exception as e:
+                print(f"Ошибка при получении чатов: {e}")
+                self.show_invalid_login_popup()
 
     def show_invalid_login_popup(self):
         popup = Popup(title='Invalid Login',
@@ -70,10 +70,6 @@ class ChatListScreen(Screen):
 
         self.add_widget(self.layout)
 
-    def open_chat(self, chat):
-        self.manager.get_screen('chat').set_chat_title(chat['title'])
-        self.manager.current = 'chat'
-
     def set_chat_list(self, chats):
         self.chat_list_layout.clear_widgets()  # Очищаем старый список
 
@@ -81,6 +77,10 @@ class ChatListScreen(Screen):
             btn = Button(text=chat['title'], size_hint_y=None, height=40)
             btn.bind(on_press=self.open_chat)
             self.chat_list_layout.add_widget(btn)
+
+    def open_chat(self, instance):
+        self.manager.get_screen('chat').set_chat_title(instance.text)
+        self.manager.current = 'chat'
 
 
 class ChatScreen(Screen):
