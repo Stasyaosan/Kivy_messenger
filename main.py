@@ -142,9 +142,17 @@ class ChatScreen(Screen):
         message_text = self.message_input.text.strip()
         if message_text:
             api = Api(session)
-            id_user = api.request_post('get_id_user')
-            print(id_user)
-            print(chat_id_global)
+            id_user = api.request_post('get_id_user',{'token': session})['id_user']
+            data = {'token': session, 'id_user': id_user, 'text_message': message_text, 'id_chat': chat_id_global}
+            response = api.request_post('add_message', data)
+            if response['status'] == 'ok':
+                msg_text = f'{id_user}: {message_text}'
+                label = Label(text=msg_text, size_hint_y=None,height=40)
+                self.chat_content_layout.add_widget(label)
+                self.scroll_view.scroll_y = 0
+                self.message_input.text = ''
+            else:
+                pass
 
 
 
