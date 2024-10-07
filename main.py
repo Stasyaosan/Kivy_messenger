@@ -1,5 +1,6 @@
 from kivy.app import App
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.image import AsyncImage
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
@@ -9,6 +10,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.popup import Popup
 from kivy.uix.textinput import TextInput
 
+import config
 from api import Auth, Api
 from db import Connect
 from kivy.core.window import Window
@@ -160,14 +162,16 @@ class ChatScreen(Screen):
         self.chat_content_layout.clear_widgets()
 
         for message in messages:
-            message_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
 
             if message['file'] == '':
+                message_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
                 msg_text = f"{message['user']}: {message['text']}"
                 message_label = Label(text=msg_text, size_hint=(0.8, 1))
                 message_box.add_widget(message_label)
             else:
-                pass
+                message_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=200)
+                aimg = AsyncImage(source=config.URL_SITE + message['file'], fit_mode="scale-down")
+                message_box.add_widget(aimg)
 
             delete_button = Button(text='Удалить', size_hint=(0.2, 1))
             delete_button.bind(on_press=partial(self.delete_message, message['id'], message_box))
