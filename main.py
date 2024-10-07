@@ -1,4 +1,5 @@
 from kivy.app import App
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
@@ -130,9 +131,31 @@ class ChatScreen(Screen):
         self.chat_content_layout.clear_widgets()
 
         for message in messages:
-            msg_text = f"{message['user']}: {message['text']}"
-            label = Label(text=msg_text, size_hint_y=None, height=40)
-            self.chat_content_layout.add_widget(label)
+            message_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
+            if message['file'] == '':
+                msg_text = f"{message['user']}: {message['text']}"
+                message_label = Label(text=msg_text, size_hint=(0.8, 1))
+                message_box.add_widget(message_label)
+            else:
+                pass
+            delete_button = Button(text='Удалить', size_hint=(0.2, 1))
+            delete_button.bind(on_press=partial(self.delete_message, message['id'], message_box))
+            message_box.add_widget(delete_button)
+
+            self.chat_content_layout.add_widget(message_box)
+    def delete_message(self, message_id, message_box, instance):
+        api = Api(session)
+        d = {'id_message': message_id}
+        response = api.request_post('delete_message', d)
+        if response['status'] == 'ok':
+            self.chat_content_layout.remove_widget(message_box)
+        else:
+            popup = Popup(
+                title='Ошибка удаления',
+                content=Label(text='Не удалось удалить сообщение'),
+                size_hint=(0.6,0.4)
+            )
+            popup.open()
 
     def go_back_to_chats(self, instance):
         self.manager.current = 'chats'
@@ -147,8 +170,18 @@ class ChatScreen(Screen):
             response = api.request_post('add_message', data)
             if response['status'] == 'ok':
                 msg_text = f'{id_user}: {message_text}'
-                label = Label(text=msg_text, size_hint_y=None,height=40)
-                self.chat_content_layout.add_widget(label)
+                '''label = Label(text=msg_text, size_hint_y=None,height=40)
+                self.chat_content_layout.add_widget(label)'''
+
+
+                message_box = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
+                message_label = Label(text=msg_text, size_hint=(0.8, 1))
+                message_box.add_widget(message_label)
+
+                delete_button = Button(text='Удалить', size_hint=(0.2, 1))
+                delete_button.bind(on_press=partial(self.delete_message, response['id_message'], message_box))
+                message_box.add_widget(delete_button)
+                self.chat_content_layout.add_widget(message_box)
                 self.scroll_view.scroll_y = 0
                 self.message_input.text = ''
             else:

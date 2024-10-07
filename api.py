@@ -11,8 +11,7 @@ class Api:
 
         if params != None:
             params['token'] = self.token
-            print(params)
-            print(url)
+
             data = requests.post(url, data=params)
         else:
             data = requests.post(url)
