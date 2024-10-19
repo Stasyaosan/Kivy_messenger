@@ -1,5 +1,9 @@
+import json
+
 from kivy.app import App
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.checkbox import CheckBox
+from kivy.uix.image import AsyncImage
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
@@ -9,6 +13,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.popup import Popup
 from kivy.uix.textinput import TextInput
 
+import config
 from api import Auth, Api
 from db import Connect
 from functools import partial
@@ -63,6 +68,10 @@ class ChatListScreen(Screen):
         self.header = Label(text='Список чатов', font_size='24sp', size_hint=(1, 0.1))
         self.layout.add_widget(self.header)
 
+        self.create_chat_btn = Button(text='Создать чат', size_hint=(1, 0.1))
+        self.create_chat_btn.bind(on_press=self.show_create_chat_popup)
+        self.layout.add_widget(self.create_chat_btn)
+
         self.scroll_view = ScrollView(size_hint=(1, 0.9))
         self.chat_list_layout = GridLayout(cols=1, size_hint_y=None)
         self.chat_list_layout.bind(minimum_height=self.chat_list_layout.setter('height'))
@@ -70,6 +79,41 @@ class ChatListScreen(Screen):
         self.layout.add_widget(self.scroll_view)
 
         self.add_widget(self.layout)
+
+    def show_create_chat_popup(self, instance):
+        content = BoxLayout(orientation='vertical')
+        self.chat_name_input = TextInput(hint_text='Введите название чата', multiline=False)
+        content.add_widget(self.chat_name_input)
+
+        self.chat_description_input = TextInput(hint_text='Введите описание чата', multiline=False)
+        content.add_widget(self.chat_description_input)
+
+        create_btn = Button(text='Создать')
+        create_btn.bind(on_press=self.create_chat)
+        content.add_widget(create_btn)
+
+        self.create_chat_popup = Popup(
+            title='Создать чат',
+            content=content,
+            size_hint=(0.6, 0.4)
+        )
+        self.create_chat_popup.open()
+
+    def create_chat(self, instance):
+        chat_name = self.chat_name_input.text
+        chat_description = self.chat_description_input.text
+        if len(chat_name) >= 5 and len(chat_name) <= 200:
+            api = Api(session)
+            id_user = api.request_post('get_id_user', {'token': session})['id_user']
+            response = api.request_post('create_chat', {'token': session, 'id_creator': id_user, 'title': chat_name, 'description': chat_description})
+            if response['status'] == 'ok':
+                self.refresh_chat_list()
+            self.create_chat_popup.dismiss()
+    def refresh_chat_list(self):
+        api = Api(session)
+        id_user = api.request_post('get_id_user', {'token': session})['id_user']
+        chat_list = api.request_post('get_chats', {'token': session, 'id_user': id_user})
+        self.set_chat_list(chat_list)
 
     def set_chat_list(self, chats):
         self.chat_list_layout.clear_widgets()  # Очищаем старый список
@@ -98,6 +142,9 @@ class ChatScreen(Screen):
         super(ChatScreen, self).__init__(**kwargs)
         self.layout = BoxLayout(orientation='vertical')
 
+        self.button_setting = Button(text='Настройки',size_hint=(1, 0.1))
+        self.button_setting.bind(on_press=self.show_settings_chat_popup)
+        self.layout.add_widget(self.button_setting)
         self.chat_title = Label(text='', font_size='24sp', size_hint=(1, 0.1))
         self.layout.add_widget(self.chat_title)
 
@@ -124,6 +171,77 @@ class ChatScreen(Screen):
 
         self.add_widget(self.layout)
 
+    def show_settings_chat_popup(self, instance):
+        content = BoxLayout(orientation='vertical')
+        self.chat_name_input = TextInput(hint_text='Введите название чата', multiline=False, size_hint_y=None)
+        content.add_widget(self.chat_name_input)
+
+        self.chat_description_input = TextInput(hint_text='Введите описание чата', multiline=False, size_hint_y=None)
+        content.add_widget(self.chat_description_input)
+
+
+
+        user_layout = GridLayout(cols=1, size_hint_y=None)
+        user_layout.bind(minimum_height=user_layout.setter('height'))
+        api = Api(session)
+        users = api.request_post('get_users', {})
+        self.users_checkbox = []
+
+        response = api.request_post('get_users_from_chat', {'id_chat': chat_id_global})
+        id_users_chat = []
+        for user in json.loads(response['users']):
+           id_users_chat.append(user['pk'])
+
+        id_creator = api.request_post('get_id_user', {})['id_user']
+
+        for id_user, login_user in users.items():
+            if int(id_creator) == int(id_user):
+                continue
+            box = BoxLayout(orientation='horizontal')
+            checkbox = CheckBox()
+            if int(id_user) in id_users_chat:
+                checkbox.active = True
+            else:
+                checkbox.active = False
+            label = Label(text=login_user, size_hint_x=0.8)
+            box.add_widget(checkbox)
+            box.add_widget(label)
+            user_layout.add_widget(box)
+            self.users_checkbox.append({'checkbox': checkbox,'id_user': id_user})
+        scroll_view = ScrollView(size_hint=(1, 0.4))
+        scroll_view.add_widget(user_layout)
+        content.add_widget(scroll_view)
+
+        update_btn = Button(text='Обновить',size_hint_y=None)
+        update_btn.bind(on_press=self.update_chat)
+        content.add_widget(update_btn)
+
+
+
+        self.settings_chat_popup = Popup(
+            title='Настройки чата',
+            content=content,
+            size_hint=(0.6, 1)
+        )
+        self.settings_chat_popup.open()
+
+    def update_chat(self, instance):
+        for user in self.users_checkbox:
+            if user['checkbox'].active:
+                id_user = user['id_user']
+                api = Api(session)
+                response = api.request_post('add_user_to_chat', {'id_user': id_user, 'id_chat': chat_id_global})
+                if response['status'] == 'ok':
+                    self.settings_chat_popup.dismiss()
+            else:
+                id_user = user['id_user']
+                api = Api(session)
+                response = api.request_post('delete_user_from_chat', {'id_user': id_user, 'id_chat': chat_id_global})
+                if response['status'] == 'ok':
+                    self.settings_chat_popup.dismiss()
+
+
+
     def set_chat_title(self, chat_title):
         self.chat_title.text = f'Чат: {chat_title}'
 
@@ -137,7 +255,12 @@ class ChatScreen(Screen):
                 message_label = Label(text=msg_text, size_hint=(0.8, 1))
                 message_box.add_widget(message_label)
             else:
-                pass
+                img = config.URL_SITE + message['file']
+                aimg = AsyncImage(source=img, width=600)
+                message_box.add_widget(aimg)
+
+
+
             delete_button = Button(text='Удалить', size_hint=(0.2, 1))
             delete_button.bind(on_press=partial(self.delete_message, message['id'], message_box))
             message_box.add_widget(delete_button)
