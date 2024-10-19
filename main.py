@@ -1,3 +1,5 @@
+import json
+
 from kivy.app import App
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.image import AsyncImage
@@ -113,12 +115,12 @@ class ChatListScreen(Screen):
         create_btn.bind(on_press=self.create_chat)
         content.add_widget(create_btn)
 
-        create_chat_popup = Popup(
+        self.create_chat_popup = Popup(
             title='Создать чат',
             content=content,
             size_hint=(0.6, 0.7)
         )
-        create_chat_popup.open()
+        self.create_chat_popup.open()
 
     def create_chat(self, instance):
         chat_name = self.chat_name_input.text
@@ -251,11 +253,23 @@ class ChatScreen(Screen):
         user_layout.bind(minimum_height=user_layout.setter('height'))
         api = Api(session)
         users = api.request_post('get_users', {})
+        id_creator = int(api.request_post('get_id_user', {})['id_user'])
         self.users_checkbox = []
 
+        response = api.request_post('get_users_from_chat', {'id_chat': chat_id_global})
+        id_users_chat = []
+        for user in json.loads(response['users']):
+            id_users_chat.append(user['pk'])
+
         for id_user, login_user in users.items():
+            if id_creator == int(id_user):
+                continue
             box = BoxLayout(orientation='horizontal')
             checkbox = CheckBox()
+            if int(id_user) in id_users_chat:
+                checkbox.active = True
+            else:
+                checkbox.active = False
             label = Label(text=login_user, size_hint=(0.8, 0.5))
             box.add_widget(checkbox)
             box.add_widget(label)
@@ -270,17 +284,25 @@ class ChatScreen(Screen):
         update_btn.bind(on_press=self.update_chat)
         content.add_widget(update_btn)
 
-        setting_chat_popup = Popup(
+        self.setting_chat_popup = Popup(
             title='Настройки чата',
             content=content,
             size_hint=(0.6, 0.95)
         )
-        setting_chat_popup.open()
+        self.setting_chat_popup.open()
 
     def update_chat(self, instance):
         for user in self.users_checkbox:
             if user['checkbox'].active:
-                print(user['id_user'])
+                id_user = user['id_user']
+                api = Api(session)
+                response = api.request_post('add_user_to_chat', {'id_user': id_user, 'id_chat': chat_id_global})
+                if response['status'] == 'ok':
+                    self.setting_chat_popup.dismiss()
+            else:
+                id_user = user['id_user']
+                api = Api(session)
+                response = api.request_post('delete_user_to_chat', {'id_user': id_user, 'id_chat': chat_id_global})
 
     def go_back_to_chats(self, instance):
         self.manager.current = 'chats'
