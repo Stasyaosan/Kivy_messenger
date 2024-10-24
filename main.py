@@ -212,6 +212,11 @@ class ChatScreen(Screen):
         scroll_view.add_widget(user_layout)
         content.add_widget(scroll_view)
 
+
+
+        btn_delete_chat = Button(text='Удалить чат',background_color =(1, 0, 0, 1), size_hint=(1, 0.1))
+        btn_delete_chat.bind(on_press=self.show_delete_chat_popup)
+        content.add_widget(btn_delete_chat)
         update_btn = Button(text='Обновить',size_hint_y=None)
         update_btn.bind(on_press=self.update_chat)
         content.add_widget(update_btn)
@@ -224,7 +229,32 @@ class ChatScreen(Screen):
             size_hint=(0.6, 1)
         )
         self.settings_chat_popup.open()
+    def show_delete_chat_popup(self, instance):
+        content = BoxLayout(orientation='vertical')
+        chat_delete_layout = GridLayout(cols=2, size_hint_y=None)
+        btn1 = Button(text='Да', size_hint=(0.5, 0.1))
+        btn1.bind(on_press=self.delete_chat)
+        btn2 = Button(text='Нет', size_hint=(0.5, 0.1))
+        btn2.bind(on_press=self.close_popup_delete_chat)
+        chat_delete_layout.add_widget(btn1)
+        chat_delete_layout.add_widget(btn2)
+        content.add_widget(chat_delete_layout)
+        self.chat_delete_popup = Popup(
+            title='Вы подтверждаете удаление чата?',
+            content=content,
+            size_hint=(0.6, 0.3)
+        )
+        self.chat_delete_popup.open()
 
+    def delete_chat(self, instance):
+        #chat_id_global
+        api = Api(session)
+        response = api.request_post('del_chat', {'id_chat': chat_id_global})
+        if response['status'] == 'OK':
+            self.go_back_to_chats(instance)
+
+    def close_popup_delete_chat(self, instance):
+        self.chat_delete_popup.dismiss()
     def update_chat(self, instance):
         for user in self.users_checkbox:
             if user['checkbox'].active:
