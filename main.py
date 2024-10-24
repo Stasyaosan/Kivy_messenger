@@ -250,7 +250,10 @@ class ChatScreen(Screen):
         #chat_id_global
         api = Api(session)
         response = api.request_post('del_chat', {'id_chat': chat_id_global})
-        if response['status'] == 'OK':
+        if response['status'] == 'ok':
+
+            self.chat_delete_popup.dismiss()
+            self.settings_chat_popup.dismiss()
             self.go_back_to_chats(instance)
 
     def close_popup_delete_chat(self, instance):
